@@ -1,9 +1,15 @@
 
 "use client";
 
-import *
-as React from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useActionState,
+  type ChangeEvent
+} from "react";
+import { useFormStatus } from "react-dom";
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -22,8 +28,8 @@ import {
   Info,
   Eye,
   EyeOff,
-  Network, 
-  Projector, 
+  Network,
+  Projector,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -36,7 +42,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { processCode, type ActionState } from "./actions";
 import { CodeBlock } from "@/components/code-block";
-import MermaidDiagram from "@/components/mermaid-diagram";
+// import MermaidDiagram from "@/components/mermaid-diagram"; // Removed MermaidDiagram import
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -47,7 +53,7 @@ const initialState: ActionState = {
   summary: undefined,
   pythonCode: undefined,
   codeStructure: undefined,
-  diagramMermaidSyntax: undefined,
+  flowchartMarkdown: undefined, // Changed from diagramMermaidSyntax
   error: null,
   fileName: undefined,
 };
@@ -70,17 +76,17 @@ function SubmitButton() {
 }
 
 export default function PolyglotShiftPage() {
-  const [state, formAction] = useFormState(processCode, initialState);
+  const [state, formAction] = useActionState(processCode, initialState); // Changed from useFormState
   const { toast } = useToast();
-  const [fileName, setFileName] = React.useState<string | null>(null);
-  const [showApiKeyInput, setShowApiKeyInput] = React.useState(false);
-  const [modelType, setModelType] = React.useState<"gemini" | "deepseek">("gemini");
-  const [sourceLanguage, setSourceLanguage] = React.useState<"C" | "COBOL" | string>("");
-  const [apiKeyInputType, setApiKeyInputType] = React.useState<"password" | "text">("password");
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+  const [modelType, setModelType] = useState<"gemini" | "deepseek">("gemini");
+  const [sourceLanguage, setSourceLanguage] = useState<"C" | "COBOL" | string>("");
+  const [apiKeyInputType, setApiKeyInputType] = useState<"password" | "text">("password");
 
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (state?.error) {
       toast({
         variant: "destructive",
@@ -88,7 +94,7 @@ export default function PolyglotShiftPage() {
         description: state.error,
       });
     }
-    if (state?.pythonCode && !state?.error) { 
+    if (state?.pythonCode && !state?.error) {
       toast({
         title: "Processing Successful!",
         description: "Code has been converted and analyzed.",
@@ -96,7 +102,7 @@ export default function PolyglotShiftPage() {
     }
   }, [state, toast]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setFileName(event.target.files[0].name);
       const fileExtension = event.target.files[0].name.split('.').pop()?.toLowerCase();
@@ -105,7 +111,7 @@ export default function PolyglotShiftPage() {
       } else if (['cob', 'cbl', 'cpy'].includes(fileExtension || '')) {
         setSourceLanguage("COBOL");
       } else {
-        setSourceLanguage(""); 
+        setSourceLanguage("");
       }
     } else {
       setFileName(null);
@@ -131,17 +137,7 @@ export default function PolyglotShiftPage() {
     setApiKeyInputType(prev => prev === "password" ? "text" : "password");
   };
 
-  const hasResults = !state?.error && (state?.summary || state?.pythonCode || state?.codeStructure || state?.diagramMermaidSyntax);
-
-  const diagramSyntaxes = React.useMemo(() => {
-    if (state?.diagramMermaidSyntax) {
-      return state.diagramMermaidSyntax
-        .split("\n\n%%\n%% --- Next Diagram ---\n%%\n\n")
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
-    }
-    return [];
-  }, [state?.diagramMermaidSyntax]);
+  const hasResults = !state?.error && (state?.summary || state?.pythonCode || state?.codeStructure || state?.flowchartMarkdown);
 
 
   return (
@@ -206,7 +202,7 @@ export default function PolyglotShiftPage() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="flex items-center justify-between space-x-2 p-3 bg-secondary/20 rounded-md">
                 <div className="flex items-center space-x-2">
                   <Label htmlFor="modelTypeSwitch" className="text-base font-medium">Conversion Engine</Label>
@@ -327,15 +323,10 @@ export default function PolyglotShiftPage() {
                   </TabsContent>
                   <TabsContent value="visualizations">
                     <div className="markdown-content">
-                        {diagramSyntaxes.length > 0 ? (
-                           diagramSyntaxes.map((syntax, index) => (
-                             <div key={index} className="mb-6">
-                               <h3>Diagram {index + 1}</h3>
-                               <MermaidDiagram chart={syntax} idSuffix={`diagram-${index}`} />
-                             </div>
-                           ))
+                        {state.flowchartMarkdown ? (
+                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{state.flowchartMarkdown}</ReactMarkdown>
                         ) : (
-                          <p className="text-muted-foreground">Diagrams not available.</p>
+                          <p className="text-muted-foreground">Flowchart Markdown not available.</p>
                         )}
                     </div>
                   </TabsContent>
@@ -344,7 +335,7 @@ export default function PolyglotShiftPage() {
             </CardContent>
           </Card>
         )}
-        
+
         {state?.error && (
             <Alert variant="destructive" className="w-full max-w-2xl mt-8">
               <AlertTriangle className="h-4 w-4" />
@@ -357,6 +348,3 @@ export default function PolyglotShiftPage() {
     </TooltipProvider>
   );
 }
-
-
-    

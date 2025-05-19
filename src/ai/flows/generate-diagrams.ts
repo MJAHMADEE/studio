@@ -1,9 +1,9 @@
 
 'use server';
 /**
- * @fileOverview Generates Mermaid.js syntax for structural and flowchart diagrams from code.
+ * @fileOverview Generates Markdown flowchart templates from code.
  *
- * - generateDiagrams - A function that handles diagram generation.
+ * - generateDiagrams - A function that handles flowchart Markdown generation.
  * - GenerateDiagramsInput - The input type for the generateDiagrams function.
  * - GenerateDiagramsOutput - The return type for the generateDiagrams function.
  */
@@ -12,13 +12,13 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateDiagramsInputSchema = z.object({
-  code: z.string().describe('The source code to analyze for diagram generation.'),
+  code: z.string().describe('The source code to analyze for flowchart generation.'),
   language: z.enum(['C', 'COBOL']).describe('The programming language of the source code.'),
 });
 export type GenerateDiagramsInput = z.infer<typeof GenerateDiagramsInputSchema>;
 
 const GenerateDiagramsOutputSchema = z.object({
-  mermaidSyntax: z.string().describe('Mermaid.js syntax for structural and flowchart diagrams. Each diagram should be clearly separated, perhaps by a comment or heading within the syntax string if multiple diagrams are provided.'),
+  flowchartMarkdown: z.string().describe('Markdown representation of the code_s flowchart template.'),
 });
 export type GenerateDiagramsOutput = z.infer<typeof GenerateDiagramsOutputSchema>;
 
@@ -27,16 +27,23 @@ export async function generateDiagrams(input: GenerateDiagramsInput): Promise<Ge
 }
 
 const generateDiagramsPrompt = ai.definePrompt({
-  name: 'generateDiagramsPrompt',
+  name: 'generateFlowchartMarkdownPrompt',
   input: {schema: GenerateDiagramsInputSchema},
   output: {schema: GenerateDiagramsOutputSchema},
-  prompt: `You are an expert software architect specializing in code visualization.
-Analyze the following {{{language}}} code and generate:
-1. A structural diagram (e.g., function call graph, module dependencies if applicable) in Mermaid.js 'graph TD' or 'classDiagram' (if object-oriented features are present and relevant) syntax. Keep it high-level.
-2. An initial, high-level flowchart of the main algorithm or primary function(s) in Mermaid.js 'flowchart TD' syntax.
+  prompt: `You are an expert software engineer. Analyze the following {{{language}}} code.
+Your task is to generate a high-level flowchart template representing the main logic and control flow of the primary function(s) or the overall program.
+The output MUST be in Markdown format.
 
-Output ONLY the Mermaid.js syntax. If you provide multiple diagrams, separate them with "\n\n%%\n%% --- Next Diagram ---\n%%\n\n".
-Ensure the syntax is valid and ready to be rendered. Prioritize clarity and a high-level overview. Avoid overly complex or detailed diagrams.
+Use the following Markdown conventions:
+- Use headings (e.g., \`## Flowchart for function_name\` or \`### Step X: Description\`) for clarity.
+- Use ordered or unordered lists for sequential steps.
+- Represent decision points (e.g., if/else conditions) clearly. You can use sub-lists or descriptive text.
+- Indicate loops and their conditions.
+- Use simple text-based arrows like \`->\` or \`==>\` or descriptive phrases (e.g., "then proceeds to", "if true, then") to show the flow between steps.
+- You can use inline \`code\` for variable names or code snippets within the flowchart description.
+- If there are distinct major flows, you can separate them using horizontal rules (\`---\`).
+
+The goal is a human-readable Markdown document that clearly outlines the algorithmic flow, suitable for understanding and documentation. Do NOT output Mermaid.js syntax or any other diagramming language. Only Markdown.
 
 Source Code:
 \`\`\`{{{language}}}
@@ -54,8 +61,9 @@ const generateDiagramsFlow = ai.defineFlow(
   async input => {
     const {output} = await generateDiagramsPrompt(input);
     if (!output) {
-        throw new Error('Diagram generation failed to produce output.');
+        throw new Error('Flowchart Markdown generation failed to produce output.');
     }
-    return { mermaidSyntax: output.mermaidSyntax };
+    return { flowchartMarkdown: output.flowchartMarkdown };
   }
 );
+

@@ -20,7 +20,7 @@ export interface ActionState {
   summary?: string;
   pythonCode?: string;
   codeStructure?: string;
-  diagramMermaidSyntax?: string;
+  flowchartMarkdown?: string; // Changed from diagramMermaidSyntax
   error?: string | null;
   fileName?: string;
 }
@@ -98,7 +98,7 @@ export async function processCode(
       summary: summaryResult.summary,
       pythonCode: conversionResult.pythonCode,
       codeStructure: structureAnalysisResult.structureAnalysis,
-      diagramMermaidSyntax: diagramGenerationResult.mermaidSyntax,
+      flowchartMarkdown: diagramGenerationResult.flowchartMarkdown, // Changed from diagramMermaidSyntax
       fileName: newFileName,
       error: null,
     };
@@ -112,3 +112,4 @@ export async function processCode(
     return { error: errorMessage };
   }
 }
+

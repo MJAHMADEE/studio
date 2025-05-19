@@ -132,3 +132,52 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--accent));
 }
+
+/* Styles for rendered Markdown content */
+@layer components {
+  .markdown-content {
+    @apply prose prose-sm sm:prose-base lg:prose-lg xl:prose-xl dark:prose-invert max-w-none;
+    /* Or more specific styling if Tailwind Prose plugins aren't used/sufficient */
+  }
+  .markdown-content h1 {
+    @apply text-2xl font-bold mb-4 mt-6 border-b pb-2;
+  }
+  .markdown-content h2 {
+    @apply text-xl font-semibold mb-3 mt-5 border-b pb-1;
+  }
+  .markdown-content h3 {
+    @apply text-lg font-semibold mb-2 mt-4;
+  }
+  .markdown-content p {
+    @apply mb-4 leading-relaxed;
+  }
+  .markdown-content ul,
+  .markdown-content ol {
+    @apply mb-4 pl-6;
+  }
+  .markdown-content li {
+    @apply mb-1;
+  }
+  .markdown-content blockquote {
+    @apply border-l-4 border-primary pl-4 italic text-muted-foreground my-4;
+  }
+  .markdown-content pre {
+    @apply bg-secondary/50 text-secondary-foreground p-4 rounded-md overflow-x-auto my-4 text-sm;
+  }
+  .markdown-content code:not(pre > code) { /* Inline code */
+    @apply bg-secondary/30 text-secondary-foreground px-1.5 py-0.5 rounded-sm text-sm font-mono;
+  }
+  .markdown-content table {
+    @apply w-full my-4 border-collapse border border-border;
+  }
+  .markdown-content th,
+  .markdown-content td {
+    @apply border border-border px-4 py-2 text-left;
+  }
+  .markdown-content th {
+    @apply bg-secondary/50 font-semibold;
+  }
+  .markdown-content a {
+    @apply text-primary hover:underline;
+  }
+}

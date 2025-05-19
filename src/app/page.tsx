@@ -4,6 +4,9 @@
 import *
 as React from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import Link from 'next/link'; // Import Link
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   UploadCloud,
   FileText,
@@ -19,8 +22,8 @@ import {
   Info,
   Eye,
   EyeOff,
-  Network, // For code structure
-  Projector, // For visualizations
+  Network, 
+  Projector, 
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -33,7 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { processCode, type ActionState } from "./actions";
 import { CodeBlock } from "@/components/code-block";
-import MermaidDiagram from "@/components/mermaid-diagram"; // Import the MermaidDiagram component
+import MermaidDiagram from "@/components/mermaid-diagram";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -85,10 +88,6 @@ export default function PolyglotShiftPage() {
         description: state.error,
       });
     }
-    // Clear results if a new error occurs after previous success
-    if (state?.error && (state?.pythonCode || state?.summary || state?.codeStructure || state?.diagramMermaidSyntax)) {
-        // This effect hook might be too aggressive in clearing, consider if this is desired UX
-    }
     if (state?.pythonCode && !state?.error) { 
       toast({
         title: "Processing Successful!",
@@ -132,8 +131,17 @@ export default function PolyglotShiftPage() {
     setApiKeyInputType(prev => prev === "password" ? "text" : "password");
   };
 
-  // Determine if there are any results to show (excluding errors)
   const hasResults = !state?.error && (state?.summary || state?.pythonCode || state?.codeStructure || state?.diagramMermaidSyntax);
+
+  const diagramSyntaxes = React.useMemo(() => {
+    if (state?.diagramMermaidSyntax) {
+      return state.diagramMermaidSyntax
+        .split("\n\n%%\n%% --- Next Diagram ---\n%%\n\n")
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+    }
+    return [];
+  }, [state?.diagramMermaidSyntax]);
 
 
   return (
@@ -145,6 +153,9 @@ export default function PolyglotShiftPage() {
           </h1>
           <p className="text-lg text-muted-foreground mt-2">
             Seamlessly convert C & COBOL to modern Python with AI-powered insights and visualizations.
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            This application was developed by <Link href="https://www.linkedin.com/in/parisa-ghorbani-440573201/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Parisa Ghorbani</Link>.
           </p>
         </header>
 
@@ -286,7 +297,9 @@ export default function PolyglotShiftPage() {
                 <div className="p-6">
                   <TabsContent value="summary">
                     {state.summary ? (
-                       <CodeBlock code={state.summary} />
+                       <div className="markdown-content prose dark:prose-invert max-w-none">
+                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{state.summary}</ReactMarkdown>
+                       </div>
                     ) : (
                       <p className="text-muted-foreground">Summary not available.</p>
                     )}
@@ -305,14 +318,21 @@ export default function PolyglotShiftPage() {
                   </TabsContent>
                   <TabsContent value="code-structure">
                     {state.codeStructure ? (
-                       <CodeBlock code={state.codeStructure} />
+                       <div className="markdown-content prose dark:prose-invert max-w-none">
+                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{state.codeStructure}</ReactMarkdown>
+                       </div>
                     ) : (
                       <p className="text-muted-foreground">Code structure analysis not available.</p>
                     )}
                   </TabsContent>
                   <TabsContent value="visualizations">
-                    {state.diagramMermaidSyntax ? (
-                       <MermaidDiagram chart={state.diagramMermaidSyntax} />
+                    {diagramSyntaxes.length > 0 ? (
+                       diagramSyntaxes.map((syntax, index) => (
+                         <div key={index} className="mb-6">
+                           <h3 className="text-lg font-semibold mb-2 text-foreground">Diagram {index + 1}</h3>
+                           <MermaidDiagram chart={syntax} idSuffix={`diagram-${index}`} />
+                         </div>
+                       ))
                     ) : (
                       <p className="text-muted-foreground">Diagrams not available.</p>
                     )}

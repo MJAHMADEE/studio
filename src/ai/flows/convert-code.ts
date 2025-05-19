@@ -6,11 +6,11 @@
  *
  * - convertCode - A function that handles the code conversion process.
  * - ConvertCodeInput - The input type for the convertCode function.
- * - ConvertCodeOutput - The return type for the convertCode function.
+ * - ConvertCodeOutput - The return type for the convertCodeFunction.
  */
 
 import {ai} from '@/ai/genkit';
-import {z, genkit} from 'genkit'; // Added genkit import here
+import {z, genkit} from 'genkit'; // genkit import is present
 import {googleAI} from '@genkit-ai/googleai';
 
 const ConvertCodeInputSchema = z.object({
@@ -30,8 +30,9 @@ export async function convertCode(input: ConvertCodeInput): Promise<ConvertCodeO
   return convertCodeFlow(input);
 }
 
-const convertCodePrompt = ai.definePrompt({
-  name: 'convertCodePrompt',
+// This defined prompt object contains the template, schemas, and config
+const convertCodePromptDefinition = ai.definePrompt({
+  name: 'convertCodePromptDef', // Changed name slightly to avoid confusion with a potential function
   input: {
     schema: ConvertCodeInputSchema,
   },
@@ -43,9 +44,8 @@ const convertCodePrompt = ai.definePrompt({
 \`\`\`{{{code}}}\`\`\`
 
 Ensure the output is valid Python code.
-`,
+`, // Note: The backticks for the code block are escaped for JS template literal, Handlebars receives ```{{{code}}}```
   config: {
-    // Safety settings can be adjusted as needed
     safetySettings: [
       {
         category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
@@ -65,63 +65,51 @@ const convertCodeFlow = ai.defineFlow(
     inputSchema: ConvertCodeInputSchema,
     outputSchema: ConvertCodeOutputSchema,
   },
-  async input => {
+  async (input: ConvertCodeInput): Promise<ConvertCodeOutput> => {
     const {
-      code,
-      sourceLanguage,
+      // code, // input.code will be used directly
+      // sourceLanguage, // input.sourceLanguage will be used directly
       apiKey,
       modelType,
     } = input;
 
-    // This local `ai` instance will be used for this flow run.
-    // It's not ideal to reconfigure the global `ai` object this way,
-    // but for simplicity in this example, we'll do it.
-    // A better approach might involve passing the configured AI instance or model directly.
-    let currentAi = ai;
+    let currentAi = ai; // Start with the global ai instance
+
     if (apiKey && modelType === 'gemini') {
+      // Create a new Genkit instance with the custom API key for Gemini
       currentAi = genkit({plugins: [googleAI({apiKey})]});
     }
 
-
-    // Select model based on modelType
-    let modelName = 'googleai/gemini-2.0-flash'; // Default to Gemini model from global config
+    // Determine the model to use
+    let modelName = 'googleai/gemini-2.0-flash'; // Default to Gemini
     if (modelType === 'deepseek') {
-      // IMPORTANT: Replace 'deepseek-coder:33b-instruct' with the actual model identifier
-      // if you have a different DeepSeek model configured and available via a Genkit plugin.
-      // This example assumes a plugin like 'genkit-deepseek' would be configured globally
-      // or that the model name 'deepseek-coder:33b-instruct' is recognized by an existing plugin.
-      // For this specific app structure, a local model like DeepSeek would typically be
-      // configured in `src/ai/genkit.ts` or a local-model specific plugin.
-      // Without a DeepSeek plugin, this will likely default to trying to find it via Google AI, which will fail.
+      // IMPORTANT: Ensure a DeepSeek plugin is configured in src/ai/genkit.ts
+      // or globally for this model name to be recognized.
       modelName = 'deepseek-coder:33b-instruct';
     }
 
-    const {output} = await currentAi.generate({
-        prompt: { // This should reference the defined prompt object directly
-            name: 'convertCodePrompt', // Or, more directly: `prompt: convertCodePrompt`
-            input: input, // Pass the flow input to the prompt
-        },
-        model: modelName, // Specify the model to use
-        config: convertCodePrompt.config, // Pass existing config like safety settings
+    // Manually construct the prompt string by interpolating values.
+    // This is because ai.generate() with a raw string doesn't do Handlebars.
+    // The `convertCodePromptDefinition.prompt` is the Handlebars template string.
+    // For safety and simplicity, directly interpolate.
+    const finalPromptText = `You are a code conversion expert. Convert the following ${input.sourceLanguage} code to Python.\n\n\`\`\`\n${input.code}\n\`\`\`\n\nEnsure the output is valid Python code.`;
+
+    const generateResponse = await currentAi.generate({
+        prompt: finalPromptText,
+        model: modelName,
+        config: convertCodePromptDefinition.config, // Reuse safety settings and other configs
+        output: { // Specify structured output requirements
+            schema: ConvertCodeOutputSchema,
+            format: "json" // Crucial for Gemini to return JSON matching the schema
+        }
     });
     
-    // The prompt definition already includes output schema, so direct casting might not be needed
-    // if ai.generate respects it or if we use the typed prompt function.
-    // For clarity, if using ai.generate directly, ensure the output matches ConvertCodeOutputSchema.
-    // Since `convertCodePrompt` is defined with output schema, using it directly is safer:
-    // const { output } = await convertCodePrompt(input, { model: modelName });
-    // However, to use the apiKey override with a local ai instance, calling ai.generate is more direct.
-    // We need to ensure the output structure matches. `prompt()` function is generally preferred.
+    const outputData = generateResponse.output;
 
-    // Assuming the output from ai.generate directly might not be strongly typed to ConvertCodeOutputSchema
-    // without using the `prompt()` function itself, we cast it.
-    // A more robust way if `prompt()` was used:
-    // const { output: typedOutput } = await convertCodePrompt(input, { model: modelName });
-    // return typedOutput!;
-    // Given we are using ai.generate, we assume the output structure is correct or handle it.
-    // The LLM is asked to produce output matching ConvertCodeOutputSchema via the prompt definition.
-
-    return output as ConvertCodeOutput; // Cast if necessary, or ensure the LLM provides the correct structure.
+    if (!outputData) {
+      throw new Error('Code conversion failed to produce output.');
+    }
+    
+    return outputData; // Genkit 1.x: response.output for structured data
   }
 );
-

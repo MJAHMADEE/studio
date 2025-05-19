@@ -17,6 +17,8 @@ import {
   FileCode,
   AlertTriangle,
   Info,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -33,7 +35,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils"; // Added import for cn
+import { cn } from "@/lib/utils";
 
 
 const initialState: ActionState = {
@@ -67,6 +69,7 @@ export default function PolyglotShiftPage() {
   const [showApiKeyInput, setShowApiKeyInput] = React.useState(false);
   const [modelType, setModelType] = React.useState<"gemini" | "deepseek">("gemini");
   const [sourceLanguage, setSourceLanguage] = React.useState<"C" | "COBOL" | string>("");
+  const [apiKeyInputType, setApiKeyInputType] = React.useState<"password" | "text">("password");
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -78,7 +81,7 @@ export default function PolyglotShiftPage() {
         description: state.error,
       });
     }
-    if (state?.pythonCode) {
+    if (state?.pythonCode && !state?.error) { // Ensure no error before showing success
       toast({
         title: "Conversion Successful!",
         description: "Code has been converted and summarized.",
@@ -118,6 +121,10 @@ export default function PolyglotShiftPage() {
     }
   };
 
+  const toggleApiKeyVisibility = () => {
+    setApiKeyInputType(prev => prev === "password" ? "text" : "password");
+  };
+
   return (
     <TooltipProvider>
       <div className="container mx-auto p-4 md:p-8 min-h-screen flex flex-col items-center">
@@ -151,7 +158,7 @@ export default function PolyglotShiftPage() {
                   name="file"
                   type="file"
                   required
-                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                  className="truncate file:mr-2 file:py-2 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                   accept=".c,.h,.cob,.cbl,.cpy"
                   ref={fileInputRef}
                   onChange={handleFileChange}
@@ -180,7 +187,7 @@ export default function PolyglotShiftPage() {
               
               <div className="flex items-center justify-between space-x-2 p-3 bg-secondary/20 rounded-md">
                 <div className="flex items-center space-x-2">
-                  <Label htmlFor="modelType" className="text-base font-medium">Conversion Engine</Label>
+                  <Label htmlFor="modelTypeSwitch" className="text-base font-medium">Conversion Engine</Label> {/* Changed htmlFor for clarity as Switch has its own id */}
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Info className="h-4 w-4 text-muted-foreground cursor-help" />
@@ -190,14 +197,15 @@ export default function PolyglotShiftPage() {
                         </TooltipContent>
                     </Tooltip>
                 </div>
+                {/* Hidden input to carry the modelType value for the form */}
+                <input type="hidden" name="modelType" value={modelType} />
                 <div className="flex items-center space-x-2">
                   <span className={cn("text-sm font-medium", modelType === 'deepseek' ? 'text-primary' : 'text-muted-foreground')}>DeepSeek (Local)</span>
                   <Switch
-                    id="modelType"
-                    name="modelType"
+                    id="modelTypeSwitch" // Consistent ID with label
                     checked={modelType === "gemini"}
                     onCheckedChange={(checked) => setModelType(checked ? "gemini" : "deepseek")}
-                    value={modelType}
+                    aria-label="Toggle conversion engine between DeepSeek (local) and Gemini (cloud)"
                   />
                   <span className={cn("text-sm font-medium", modelType === 'gemini' ? 'text-primary' : 'text-muted-foreground')}>Gemini (Cloud)</span>
                 </div>
@@ -210,17 +218,29 @@ export default function PolyglotShiftPage() {
                       <KeyRound className="h-5 w-5 text-primary" /> Gemini API Key
                     </Label>
                     <Button variant="link" type="button" onClick={() => setShowApiKeyInput(!showApiKeyInput)} className="p-0 h-auto text-sm">
-                      {showApiKeyInput ? "Hide" : "Enter custom key"}
+                      {showApiKeyInput ? "Hide custom key" : "Enter custom key"}
                     </Button>
                   </div>
                   {showApiKeyInput && (
-                     <Input
-                        id="apiKey"
-                        name="apiKey"
-                        type="password"
-                        placeholder="Enter your Gemini API Key (optional)"
-                        className="transition-all duration-300 ease-in-out"
-                      />
+                     <div className="relative flex items-center">
+                        <Input
+                          id="apiKey"
+                          name="apiKey"
+                          type={apiKeyInputType}
+                          placeholder="Enter your Gemini API Key (optional)"
+                          className="transition-all duration-300 ease-in-out pr-10" // Add padding for the icon
+                        />
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute inset-y-0 right-0 flex items-center justify-center h-full w-10 text-muted-foreground hover:text-foreground"
+                            onClick={toggleApiKeyVisibility}
+                            aria-label={apiKeyInputType === "password" ? "Show API key" : "Hide API key"}
+                        >
+                            {apiKeyInputType === "password" ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                        </Button>
+                     </div>
                   )}
                   {!showApiKeyInput && <p className="text-xs text-muted-foreground">Using default API key. Click 'Enter custom key' to provide your own.</p>}
                 </div>

@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -9,7 +10,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z, genkit} from 'genkit'; // Added genkit import here
 import {googleAI} from '@genkit-ai/googleai';
 
 const ConvertCodeInputSchema = z.object({
@@ -39,7 +40,7 @@ const convertCodePrompt = ai.definePrompt({
   },
   prompt: `You are a code conversion expert. Convert the following {{{sourceLanguage}}} code to Python.
 
-\\\`\\\`\\\`{{{code}}}\\\`\\\`\\\`
+\`\`\`{{{code}}}\`\`\`
 
 Ensure the output is valid Python code.
 `,
@@ -96,9 +97,9 @@ const convertCodeFlow = ai.defineFlow(
     }
 
     const {output} = await currentAi.generate({
-        prompt: {
-            name: 'convertCodePrompt',
-            input: input,
+        prompt: { // This should reference the defined prompt object directly
+            name: 'convertCodePrompt', // Or, more directly: `prompt: convertCodePrompt`
+            input: input, // Pass the flow input to the prompt
         },
         model: modelName, // Specify the model to use
         config: convertCodePrompt.config, // Pass existing config like safety settings

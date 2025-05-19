@@ -4,7 +4,7 @@
 import *
 as React from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import Link from 'next/link'; // Import Link
+import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -297,7 +297,7 @@ export default function PolyglotShiftPage() {
                 <div className="p-6">
                   <TabsContent value="summary">
                     {state.summary ? (
-                       <div className="markdown-content prose dark:prose-invert max-w-none">
+                       <div className="markdown-content">
                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{state.summary}</ReactMarkdown>
                        </div>
                     ) : (
@@ -318,7 +318,7 @@ export default function PolyglotShiftPage() {
                   </TabsContent>
                   <TabsContent value="code-structure">
                     {state.codeStructure ? (
-                       <div className="markdown-content prose dark:prose-invert max-w-none">
+                       <div className="markdown-content">
                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{state.codeStructure}</ReactMarkdown>
                        </div>
                     ) : (
@@ -326,16 +326,18 @@ export default function PolyglotShiftPage() {
                     )}
                   </TabsContent>
                   <TabsContent value="visualizations">
-                    {diagramSyntaxes.length > 0 ? (
-                       diagramSyntaxes.map((syntax, index) => (
-                         <div key={index} className="mb-6">
-                           <h3 className="text-lg font-semibold mb-2 text-foreground">Diagram {index + 1}</h3>
-                           <MermaidDiagram chart={syntax} idSuffix={`diagram-${index}`} />
-                         </div>
-                       ))
-                    ) : (
-                      <p className="text-muted-foreground">Diagrams not available.</p>
-                    )}
+                    <div className="markdown-content">
+                        {diagramSyntaxes.length > 0 ? (
+                           diagramSyntaxes.map((syntax, index) => (
+                             <div key={index} className="mb-6">
+                               <h3>Diagram {index + 1}</h3>
+                               <MermaidDiagram chart={syntax} idSuffix={`diagram-${index}`} />
+                             </div>
+                           ))
+                        ) : (
+                          <p className="text-muted-foreground">Diagrams not available.</p>
+                        )}
+                    </div>
                   </TabsContent>
                 </div>
               </Tabs>
@@ -355,3 +357,6 @@ export default function PolyglotShiftPage() {
     </TooltipProvider>
   );
 }
+
+
+    

@@ -30,6 +30,7 @@ import {
   EyeOff,
   Network,
   Projector,
+  AlertCircle, // Keep if used elsewhere, or remove if only for previous DeepSeek icon
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { processCode, type ActionState } from "./actions";
 import { CodeBlock } from "@/components/code-block";
-// import MermaidDiagram from "@/components/mermaid-diagram"; // Removed MermaidDiagram import
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -53,7 +53,7 @@ const initialState: ActionState = {
   summary: undefined,
   pythonCode: undefined,
   codeStructure: undefined,
-  flowchartMarkdown: undefined, // Changed from diagramMermaidSyntax
+  flowchartMarkdown: undefined,
   error: null,
   fileName: undefined,
 };
@@ -76,7 +76,7 @@ function SubmitButton() {
 }
 
 export default function PolyglotShiftPage() {
-  const [state, formAction] = useActionState(processCode, initialState); // Changed from useFormState
+  const [state, formAction] = useActionState(processCode, initialState);
   const { toast } = useToast();
   const [fileName, setFileName] = useState<string | null>(null);
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
@@ -148,7 +148,7 @@ export default function PolyglotShiftPage() {
             PolyglotShift
           </h1>
           <p className="text-lg text-muted-foreground mt-2">
-            Seamlessly convert C & COBOL to modern Python with AI-powered insights and visualizations.
+            Seamlessly convert C & COBOL to modern Python with AI-powered insights.
           </p>
           <p className="text-sm text-muted-foreground mt-1">
             This application was developed by <Link href="https://www.linkedin.com/in/parisa-ghorbani-440573201/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Parisa Ghorbani</Link>.
@@ -204,14 +204,17 @@ export default function PolyglotShiftPage() {
               </div>
 
               <div className="flex items-center justify-between space-x-2 p-3 bg-secondary/20 rounded-md">
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1">
                   <Label htmlFor="modelTypeSwitch" className="text-base font-medium">Conversion Engine</Label>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Gemini: Cloud-based, powerful. DeepSeek: Local, privacy-focused.</p>
+                        <TooltipContent side="top" className="max-w-xs">
+                            <p className="font-semibold mb-1">Gemini (Cloud):</p>
+                            <p className="text-xs mb-2">Uses Google's powerful cloud-based AI. You can use the default API key or provide your own.</p>
+                            <p className="font-semibold mb-1">DeepSeek (Local):</p>
+                            <p className="text-xs">Uses a model running on your own computer (e.g., via Ollama). Requires you to have the DeepSeek model downloaded and the local server running. No API key needed for this option.</p>
                         </TooltipContent>
                     </Tooltip>
                 </div>
@@ -348,3 +351,5 @@ export default function PolyglotShiftPage() {
     </TooltipProvider>
   );
 }
+
+    

@@ -19,8 +19,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased flex flex-col min-h-screen bg-background`}>
+    <html lang="en" className="h-full" suppressHydrationWarning={true}>
+      <body 
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased flex flex-col min-h-screen bg-background`}
+        suppressHydrationWarning={true}
+      >
         <main className="flex-grow">
           {children}
         </main>

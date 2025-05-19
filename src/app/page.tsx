@@ -19,6 +19,8 @@ import {
   Info,
   Eye,
   EyeOff,
+  Network, // For code structure
+  Projector, // For visualizations
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -31,9 +33,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { processCode, type ActionState } from "./actions";
 import { CodeBlock } from "@/components/code-block";
+import MermaidDiagram from "@/components/mermaid-diagram"; // Import the MermaidDiagram component
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
-import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +43,8 @@ import { cn } from "@/lib/utils";
 const initialState: ActionState = {
   summary: undefined,
   pythonCode: undefined,
+  codeStructure: undefined,
+  diagramMermaidSyntax: undefined,
   error: null,
   fileName: undefined,
 };
@@ -77,14 +81,18 @@ export default function PolyglotShiftPage() {
     if (state?.error) {
       toast({
         variant: "destructive",
-        title: "Conversion Error",
+        title: "Processing Error",
         description: state.error,
       });
     }
-    if (state?.pythonCode && !state?.error) { // Ensure no error before showing success
+    // Clear results if a new error occurs after previous success
+    if (state?.error && (state?.pythonCode || state?.summary || state?.codeStructure || state?.diagramMermaidSyntax)) {
+        // This effect hook might be too aggressive in clearing, consider if this is desired UX
+    }
+    if (state?.pythonCode && !state?.error) { 
       toast({
-        title: "Conversion Successful!",
-        description: "Code has been converted and summarized.",
+        title: "Processing Successful!",
+        description: "Code has been converted and analyzed.",
       });
     }
   }, [state, toast]);
@@ -92,14 +100,13 @@ export default function PolyglotShiftPage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setFileName(event.target.files[0].name);
-      // Auto-select language based on extension
       const fileExtension = event.target.files[0].name.split('.').pop()?.toLowerCase();
       if (fileExtension === 'c' || fileExtension === 'h') {
         setSourceLanguage("C");
       } else if (['cob', 'cbl', 'cpy'].includes(fileExtension || '')) {
         setSourceLanguage("COBOL");
       } else {
-        setSourceLanguage(""); // Clear if unknown
+        setSourceLanguage(""); 
       }
     } else {
       setFileName(null);
@@ -125,6 +132,10 @@ export default function PolyglotShiftPage() {
     setApiKeyInputType(prev => prev === "password" ? "text" : "password");
   };
 
+  // Determine if there are any results to show (excluding errors)
+  const hasResults = !state?.error && (state?.summary || state?.pythonCode || state?.codeStructure || state?.diagramMermaidSyntax);
+
+
   return (
     <TooltipProvider>
       <div className="container mx-auto p-4 md:p-8 min-h-screen flex flex-col items-center">
@@ -133,7 +144,7 @@ export default function PolyglotShiftPage() {
             PolyglotShift
           </h1>
           <p className="text-lg text-muted-foreground mt-2">
-            Seamlessly convert C & COBOL to modern Python with AI-powered insights.
+            Seamlessly convert C & COBOL to modern Python with AI-powered insights and visualizations.
           </p>
         </header>
 
@@ -187,7 +198,7 @@ export default function PolyglotShiftPage() {
               
               <div className="flex items-center justify-between space-x-2 p-3 bg-secondary/20 rounded-md">
                 <div className="flex items-center space-x-2">
-                  <Label htmlFor="modelTypeSwitch" className="text-base font-medium">Conversion Engine</Label> {/* Changed htmlFor for clarity as Switch has its own id */}
+                  <Label htmlFor="modelTypeSwitch" className="text-base font-medium">Conversion Engine</Label>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Info className="h-4 w-4 text-muted-foreground cursor-help" />
@@ -197,12 +208,11 @@ export default function PolyglotShiftPage() {
                         </TooltipContent>
                     </Tooltip>
                 </div>
-                {/* Hidden input to carry the modelType value for the form */}
                 <input type="hidden" name="modelType" value={modelType} />
                 <div className="flex items-center space-x-2">
                   <span className={cn("text-sm font-medium", modelType === 'deepseek' ? 'text-primary' : 'text-muted-foreground')}>DeepSeek (Local)</span>
                   <Switch
-                    id="modelTypeSwitch" // Consistent ID with label
+                    id="modelTypeSwitch"
                     checked={modelType === "gemini"}
                     onCheckedChange={(checked) => setModelType(checked ? "gemini" : "deepseek")}
                     aria-label="Toggle conversion engine between DeepSeek (local) and Gemini (cloud)"
@@ -228,7 +238,7 @@ export default function PolyglotShiftPage() {
                           name="apiKey"
                           type={apiKeyInputType}
                           placeholder="Enter your Gemini API Key (optional)"
-                          className="transition-all duration-300 ease-in-out pr-10" // Add padding for the icon
+                          className="transition-all duration-300 ease-in-out pr-10"
                         />
                         <Button
                             type="button"
@@ -252,19 +262,25 @@ export default function PolyglotShiftPage() {
           </form>
         </Card>
 
-        {(state?.summary || state?.pythonCode) && !state?.error && (
+        {hasResults && (
           <Card className="w-full max-w-2xl mt-8 md:mt-12 shadow-2xl rounded-xl overflow-hidden">
             <CardHeader className="bg-secondary/30 p-6">
               <CardTitle className="text-2xl">Conversion Results</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <Tabs defaultValue="summary" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 rounded-none">
+                <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 rounded-none">
                   <TabsTrigger value="summary" className="py-3 text-base rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">
-                    <Lightbulb className="mr-2 h-5 w-5" /> Code Summary
+                    <Lightbulb className="mr-2 h-5 w-5" /> Summary
                   </TabsTrigger>
                   <TabsTrigger value="python-code" className="py-3 text-base rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">
-                    <FileCode className="mr-2 h-5 w-5" /> Python Code
+                    <FileCode className="mr-2 h-5 w-5" /> Python
+                  </TabsTrigger>
+                  <TabsTrigger value="code-structure" className="py-3 text-base rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">
+                    <Network className="mr-2 h-5 w-5" /> Structure
+                  </TabsTrigger>
+                  <TabsTrigger value="visualizations" className="py-3 text-base rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">
+                    <Projector className="mr-2 h-5 w-5" /> Diagrams
                   </TabsTrigger>
                 </TabsList>
                 <div className="p-6">
@@ -287,6 +303,20 @@ export default function PolyglotShiftPage() {
                       <p className="text-muted-foreground">Converted code not available.</p>
                     )}
                   </TabsContent>
+                  <TabsContent value="code-structure">
+                    {state.codeStructure ? (
+                       <CodeBlock code={state.codeStructure} />
+                    ) : (
+                      <p className="text-muted-foreground">Code structure analysis not available.</p>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="visualizations">
+                    {state.diagramMermaidSyntax ? (
+                       <MermaidDiagram chart={state.diagramMermaidSyntax} />
+                    ) : (
+                      <p className="text-muted-foreground">Diagrams not available.</p>
+                    )}
+                  </TabsContent>
                 </div>
               </Tabs>
             </CardContent>
@@ -305,4 +335,3 @@ export default function PolyglotShiftPage() {
     </TooltipProvider>
   );
 }
-

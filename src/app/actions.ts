@@ -3,6 +3,8 @@
 
 import { convertCode, type ConvertCodeInput } from "@/ai/flows/convert-code";
 import { summarizeCode, type SummarizeCodeInput } from "@/ai/flows/summarize-code";
+import { analyzeCodeStructure, type AnalyzeCodeStructureInput } from "@/ai/flows/analyze-code-structure";
+import { generateDiagrams, type GenerateDiagramsInput } from "@/ai/flows/generate-diagrams";
 import { z } from "zod";
 
 const FormSchema = z.object({
@@ -17,11 +19,13 @@ const FormSchema = z.object({
 export interface ActionState {
   summary?: string;
   pythonCode?: string;
+  codeStructure?: string;
+  diagramMermaidSyntax?: string;
   error?: string | null;
   fileName?: string;
 }
 
-const DEFAULT_GEMINI_API_KEY = "AIzaSyAPKwuQaTvNVQ-PeBINDBSpZZ5b_xSEQo4";
+const DEFAULT_GEMINI_API_KEY = "AIzaSyAPKwuQaTvNVQ-PeBINDBSpZZ5b_xSEQo4"; // Please replace with your actual default key or manage via environment variables
 
 export async function processCode(
   prevState: ActionState | undefined,
@@ -68,19 +72,24 @@ export async function processCode(
       apiKey: validatedApiKey,
     } = validatedFields.data;
 
-    const summarizeInput: SummarizeCodeInput = {
-      code: validatedCode,
-      language: validatedSourceLanguage,
-    };
-    const summaryResult = await summarizeCode(summarizeInput);
-
+    // Prepare inputs for all AI flows
+    const summarizeInput: SummarizeCodeInput = { code: validatedCode, language: validatedSourceLanguage };
     const convertInput: ConvertCodeInput = {
       code: validatedCode,
       sourceLanguage: validatedSourceLanguage,
       modelType: validatedModelType,
       apiKey: validatedModelType === "gemini" ? (validatedApiKey || DEFAULT_GEMINI_API_KEY) : undefined,
     };
-    const conversionResult = await convertCode(convertInput);
+    const analyzeStructureInput: AnalyzeCodeStructureInput = { code: validatedCode, language: validatedSourceLanguage };
+    const generateDiagramsInput: GenerateDiagramsInput = { code: validatedCode, language: validatedSourceLanguage };
+
+    // Execute AI flows in parallel where possible
+    const [summaryResult, conversionResult, structureAnalysisResult, diagramGenerationResult] = await Promise.all([
+      summarizeCode(summarizeInput),
+      convertCode(convertInput),
+      analyzeCodeStructure(analyzeStructureInput),
+      generateDiagrams(generateDiagramsInput),
+    ]);
 
     const originalFileName = file.name.split('.')[0];
     const newFileName = `${originalFileName}_converted.py`;
@@ -88,11 +97,18 @@ export async function processCode(
     return {
       summary: summaryResult.summary,
       pythonCode: conversionResult.pythonCode,
+      codeStructure: structureAnalysisResult.structureAnalysis,
+      diagramMermaidSyntax: diagramGenerationResult.mermaidSyntax,
       fileName: newFileName,
       error: null,
     };
   } catch (e: any) {
     console.error("Error processing code:", e);
-    return { error: e.message || "An unknown error occurred during processing." };
+    const errorMessage = e.message || "An unknown error occurred during processing.";
+    // Check for specific Genkit/Gemini errors if needed, e.g. API key issues
+    if (e.cause?.message?.includes('API key not valid')) {
+        return { error: `Gemini API Key Error: ${e.cause.message}. Please check your API key.`};
+    }
+    return { error: errorMessage };
   }
 }

@@ -33,6 +33,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils"; // Added import for cn
 
 
 const initialState: ActionState = {
@@ -284,3 +285,4 @@ export default function PolyglotShiftPage() {
     </TooltipProvider>
   );
 }
+
